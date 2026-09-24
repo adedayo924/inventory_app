@@ -89,7 +89,7 @@ class _BarcodeScannerDialogState extends State<BarcodeScannerDialog> {
                       MobileScanner(
                         controller: _controller,
                         onDetect: _onDetect,
-                        errorBuilder: (context, error) {
+                        errorBuilder: (context, error, child) {
                           return Center(
                             child: Padding(
                               padding: const EdgeInsets.all(16.0),
