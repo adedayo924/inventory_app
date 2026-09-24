@@ -15,6 +15,18 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
+
+// Force a minimum compileSdk of 36 on all Android modules so newer AndroidX
+// dependencies (e.g. flutter_plugin_android_lifecycle) resolve correctly.
+subprojects {
+    afterEvaluate {
+        if (project.hasProperty("android")) {
+            extensions.findByType(com.android.build.gradle.BaseExtension::class.java)
+                ?.compileSdkVersion(36)
+        }
+    }
+}
+
 subprojects {
     project.evaluationDependsOn(":app")
 }

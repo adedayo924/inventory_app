@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.jeilo.jims"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
