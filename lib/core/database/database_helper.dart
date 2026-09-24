@@ -1297,6 +1297,136 @@ class DatabaseHelper {
     };
   }
 
+  // --- Advanced Reporting Queries ---
+
+  /// Returns sales totals grouped by day for the last [days] days.
+  /// Result: [{date: 'YYYY-MM-DD', total: double, orders: int}, ...]
+  Future<List<Map<String, dynamic>>> getWeeklySales({int days = 7}) async {
+    final db = await database;
+    final startDate = DateTime.now().subtract(Duration(days: days - 1));
+    final startStr = '${startDate.year.toString().padLeft(4, '0')}-'
+        '${startDate.month.toString().padLeft(2, '0')}-'
+        '${startDate.day.toString().padLeft(2, '0')}';
+    return await db.rawQuery('''
+      SELECT 
+        DATE(created_at) as date,
+        COALESCE(SUM(total), 0) as total,
+        COUNT(*) as orders
+      FROM sales
+      WHERE DATE(created_at) >= ?
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC
+    ''', [startStr]);
+  }
+
+  /// Returns the top [limit] best-selling products by quantity sold.
+  Future<List<Map<String, dynamic>>> getTopSellingProducts({int limit = 10}) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT 
+        p.name,
+        p.sku,
+        COALESCE(SUM(si.quantity), 0) as total_qty,
+        COALESCE(SUM(si.subtotal), 0) as total_revenue
+      FROM sale_items si
+      JOIN products p ON si.product_id = p.id
+      GROUP BY si.product_id
+      ORDER BY total_qty DESC
+      LIMIT ?
+    ''', [limit]);
+  }
+
+  /// Returns sales list filtered by optional date range.
+  Future<List<Map<String, dynamic>>> getSalesByDateRange({
+    String? from,
+    String? to,
+    int limit = 200,
+  }) async {
+    final db = await database;
+    final conditions = <String>[];
+    final args = <dynamic>[];
+
+    if (from != null && from.isNotEmpty) {
+      conditions.add("DATE(s.created_at) >= ?");
+      args.add(from);
+    }
+    if (to != null && to.isNotEmpty) {
+      conditions.add("DATE(s.created_at) <= ?");
+      args.add(to);
+    }
+
+    final whereClause = conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+    args.add(limit);
+
+    return await db.rawQuery('''
+      SELECT 
+        s.*,
+        c.name as customer_name,
+        u.name as cashier_name
+      FROM sales s
+      LEFT JOIN customers c ON s.customer_id = c.id
+      LEFT JOIN users u ON s.user_id = u.id
+      $whereClause
+      ORDER BY s.id DESC
+      LIMIT ?
+    ''', args);
+  }
+
+  /// Dashboard metrics scoped to a date range. Pass null for all-time.
+  Future<Map<String, dynamic>> getDashboardMetricsForPeriod({
+    String? from,
+    String? to,
+  }) async {
+    final db = await database;
+
+    final dateCond = StringBuffer();
+    final args = <dynamic>[];
+    if (from != null && from.isNotEmpty) {
+      dateCond.write(' AND DATE(created_at) >= ?');
+      args.add(from);
+    }
+    if (to != null && to.isNotEmpty) {
+      dateCond.write(' AND DATE(created_at) <= ?');
+      args.add(to);
+    }
+
+    final salesRes = await db.rawQuery(
+      'SELECT COALESCE(SUM(total), 0) as total_sales, COUNT(*) as sales_count FROM sales WHERE 1=1${dateCond.toString()}',
+      args,
+    );
+    final totalSales = (salesRes.first['total_sales'] as num?)?.toDouble() ?? 0.0;
+    final totalOrders = (salesRes.first['sales_count'] as num?)?.toInt() ?? 0;
+
+    final cogsArgs = List<dynamic>.from(args);
+    final cogsRes = await db.rawQuery('''
+      SELECT COALESCE(SUM(si.quantity * p.cost_price), 0) as total_cogs
+      FROM sale_items si
+      JOIN products p ON si.product_id = p.id
+      JOIN sales s ON si.sale_id = s.id
+      WHERE 1=1${dateCond.toString()}
+    ''', cogsArgs);
+    final totalCogs = (cogsRes.first['total_cogs'] as num?)?.toDouble() ?? 0.0;
+
+    final expArgs = List<dynamic>.from(args);
+    final expRes = await db.rawQuery(
+      'SELECT COALESCE(SUM(amount), 0) as total_expenses FROM expenses WHERE 1=1${dateCond.toString()}',
+      expArgs,
+    );
+    final totalExpenses = (expRes.first['total_expenses'] as num?)?.toDouble() ?? 0.0;
+
+    final grossProfit = totalSales - totalCogs;
+    final netProfit = grossProfit - totalExpenses;
+
+    return {
+      'total_sales': totalSales,
+      'total_orders': totalOrders,
+      'total_cogs': totalCogs,
+      'total_expenses': totalExpenses,
+      'gross_profit': grossProfit,
+      'net_profit': netProfit,
+    };
+  }
+
   // --- Settings ---
   Future<Map<String, String>> getAllSettings() async {
     final db = await database;

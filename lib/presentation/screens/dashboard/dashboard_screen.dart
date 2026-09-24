@@ -46,6 +46,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 900;
 
+    // Today's sales from weekly data
+    final todayStr = Formatters.formatDateOnly(DateTime.now());
+    final todayEntry = reports.weeklySales.where((e) => e.date == todayStr).toList();
+    final todayRevenue = todayEntry.isNotEmpty ? todayEntry.first.total : 0.0;
+    final todayOrders = todayEntry.isNotEmpty ? todayEntry.first.orders : 0;
+
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       body: RefreshIndicator(
@@ -60,21 +66,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
+              // ── Header ──
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Retail Operations Dashboard',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white),
+                      Text(
+                        'Good ${_greeting()}, ${settings.storeName}',
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Live supermarket KPI performance & inventory intelligence',
-                        style: TextStyle(fontSize: 13, color: AppTheme.textDarkSecondary),
+                        'Live operations dashboard • ${_formattedNow()}',
+                        style: const TextStyle(fontSize: 12, color: AppTheme.textDarkSecondary),
                       ),
                     ],
                   ),
@@ -85,32 +92,92 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Critical Expiry / Low Stock Alert Banner
+              // ── Today's Snapshot Banner ──
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF064E3B), Color(0xFF065F46)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppTheme.primaryDarkGreen.withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.today_rounded, color: Colors.white, size: 26),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("Today's Performance",
+                              style: TextStyle(
+                                  color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 2),
+                          Text(
+                            Formatters.formatCurrency(todayRevenue, symbol: symbol),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Text('Orders Today', style: TextStyle(color: Colors.white60, fontSize: 11)),
+                        Text(
+                          '$todayOrders',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // ── Critical Alerts Banner ──
               if (products.totalExpiredCount > 0 || products.totalNearExpiryCount > 0) ...[
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppTheme.dangerRed.withValues(alpha:0.12),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.dangerRed.withValues(alpha:0.4)),
+                    color: AppTheme.dangerRed.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppTheme.dangerRed.withValues(alpha: 0.35)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.warning_amber_rounded, color: AppTheme.dangerRed, size: 28),
+                      const Icon(Icons.warning_amber_rounded, color: AppTheme.dangerRed, size: 26),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Inventory Expiry Warning',
-                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
-                            ),
+                            const Text('Inventory Expiry Warning',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13)),
                             Text(
-                              '${products.totalExpiredCount} product(s) expired, ${products.totalNearExpiryCount} product(s) expiring within 30 days.',
+                              '${products.totalExpiredCount} product(s) expired, ${products.totalNearExpiryCount} expiring within 30 days.',
                               style: const TextStyle(color: Colors.white70, fontSize: 12),
                             ),
                           ],
@@ -122,24 +189,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // Metric Cards Grid
+              // ── KPI Metric Cards ──
               LayoutBuilder(
                 builder: (context, constraints) {
                   final width = constraints.maxWidth;
                   final crossAxisCount = width > 1100 ? 4 : (width > 650 ? 2 : 1);
-
                   return GridView.count(
                     crossAxisCount: crossAxisCount,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 14,
+                    mainAxisSpacing: 14,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    childAspectRatio: width > 650 ? 1.6 : 2.2,
+                    childAspectRatio: width > 650 ? 1.65 : 2.4,
                     children: [
                       _buildMetricCard(
                         title: 'Total Revenue',
                         value: Formatters.formatCurrency(m.totalSales, symbol: symbol),
-                        subtitle: '${m.totalOrders} transactions recorded',
+                        subtitle: '${m.totalOrders} transactions',
                         icon: Icons.payments_rounded,
                         color: AppTheme.primaryGreen,
                       ),
@@ -153,14 +219,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       _buildMetricCard(
                         title: 'Stock Valuation',
                         value: Formatters.formatCurrency(m.inventoryValue, symbol: symbol),
-                        subtitle: '${m.totalProducts} catalog products',
+                        subtitle: '${m.totalProducts} catalog SKUs',
                         icon: Icons.inventory_2_rounded,
                         color: AppTheme.infoSky,
                       ),
                       _buildMetricCard(
                         title: 'Stock Alerts',
                         value: '${m.lowStockCount} Low',
-                        subtitle: '${m.nearExpiryCount} near expiry date',
+                        subtitle: '${m.nearExpiryCount} near expiry',
                         icon: Icons.notifications_active_rounded,
                         color: m.lowStockCount > 0 ? AppTheme.warningAmber : AppTheme.successGreen,
                       ),
@@ -171,7 +237,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               const SizedBox(height: 24),
 
-              // Sales Chart Section
+              // ── 7-Day Revenue Chart ──
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
@@ -183,66 +249,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Recent Revenue Overview',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryGreen.withValues(alpha:0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            'Latest Transactions',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryMint),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+                    const Text('7-Day Revenue Overview',
+                        style: TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const SizedBox(height: 20),
                     SizedBox(
-                      height: 180,
-                      child: BarChart(
-                        BarChartData(
-                          alignment: BarChartAlignment.spaceAround,
-                          maxY: m.totalSales > 0 ? (m.totalSales * 1.2) : 10000,
-                          barTouchData: BarTouchData(enabled: true),
-                          titlesData: FlTitlesData(
-                            show: true,
-                            bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-                                getTitlesWidget: (val, meta) {
-                                  const titles = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'];
-                                  final index = val.toInt();
-                                  if (index >= 0 && index < titles.length) {
-                                    return Text(titles[index], style: const TextStyle(color: AppTheme.textDarkSecondary, fontSize: 11));
-                                  }
-                                  return const SizedBox.shrink();
-                                },
-                              ),
-                            ),
-                            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                          ),
-                          gridData: const FlGridData(show: false),
-                          borderData: FlBorderData(show: false),
-                          barGroups: [
-                            _buildBarGroup(0, m.totalSales * 0.15),
-                            _buildBarGroup(1, m.totalSales * 0.25),
-                            _buildBarGroup(2, m.totalSales * 0.18),
-                            _buildBarGroup(3, m.totalSales * 0.35),
-                            _buildBarGroup(4, m.totalSales * 0.42),
-                            _buildBarGroup(5, m.totalSales * 0.60),
-                            _buildBarGroup(6, m.totalSales),
-                          ],
-                        ),
-                      ),
+                      height: 170,
+                      child: _buildChart(reports, todayStr),
                     ),
                   ],
                 ),
@@ -250,70 +263,228 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               const SizedBox(height: 24),
 
-              // Recent Transactions Table Header
-              const Text(
-                'Recent Invoices & Transactions',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              const SizedBox(height: 12),
-
-              // Recent Sales List
-              if (sales.sales.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: AppTheme.bgDarkCard,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.borderDark),
-                  ),
-                  child: const Center(
-                    child: Text('No sales records yet.', style: TextStyle(color: AppTheme.textDarkSecondary)),
-                  ),
+              // ── Layout: chart + top products side-by-side on desktop ──
+              if (isDesktop)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 3, child: _buildRecentSales(sales, symbol, settings)),
+                    const SizedBox(width: 16),
+                    Expanded(flex: 2, child: _buildTopProducts(reports, symbol)),
+                  ],
                 )
-              else
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.bgDarkCard,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.borderDark),
-                  ),
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: sales.sales.take(5).length,
-                    separatorBuilder: (_, __) => const Divider(height: 1, color: AppTheme.borderDark),
-                    itemBuilder: (context, index) {
-                      final s = sales.sales[index];
-                      return ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryGreen.withValues(alpha:0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.receipt_rounded, color: AppTheme.primaryGreen, size: 20),
-                        ),
-                        title: Text(
-                          s.invoiceNumber,
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 14),
-                        ),
-                        subtitle: Text(
-                          '${Formatters.formatDateTimeFromIso(s.createdAt)} • ${s.paymentMethod.toUpperCase()}',
-                          style: const TextStyle(fontSize: 12, color: AppTheme.textDarkSecondary),
-                        ),
-                        trailing: Text(
-                          Formatters.formatCurrency(s.total, symbol: symbol),
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryMint, fontSize: 14),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+              else ...[
+                _buildRecentSales(sales, symbol, settings),
+                const SizedBox(height: 16),
+                _buildTopProducts(reports, symbol),
+              ],
+
+              const SizedBox(height: 20),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildChart(ReportsProvider reports, String todayStr) {
+    final now = DateTime.now();
+    final dates = List.generate(7, (i) {
+      final d = now.subtract(Duration(days: 6 - i));
+      return Formatters.formatDateOnly(d);
+    });
+    final Map<String, double> map = {for (var e in reports.weeklySales) e.date: e.total};
+    final values = dates.map((d) => map[d] ?? 0.0).toList();
+    final maxY = values.reduce((a, b) => a > b ? a : b);
+
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        maxY: maxY > 0 ? maxY * 1.25 : 1000,
+        barTouchData: BarTouchData(
+          enabled: true,
+          touchTooltipData: BarTouchTooltipData(
+            getTooltipItem: (group, gi, rod, ri) => BarTooltipItem(
+              rod.toY.toStringAsFixed(0),
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+            ),
+          ),
+        ),
+        titlesData: FlTitlesData(
+          show: true,
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (val, _) {
+                final idx = val.toInt();
+                if (idx < 0 || idx >= dates.length) return const SizedBox.shrink();
+                final d = DateTime.tryParse(dates[idx]);
+                if (d == null) return const SizedBox.shrink();
+                final label = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d.weekday - 1];
+                final isToday = dates[idx] == todayStr;
+                return Text(label,
+                    style: TextStyle(
+                      color: isToday ? AppTheme.primaryGreen : AppTheme.textDarkSecondary,
+                      fontSize: 11,
+                      fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                    ));
+              },
+            ),
+          ),
+          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          getDrawingHorizontalLine: (_) =>
+              const FlLine(color: AppTheme.borderDark, strokeWidth: 1, dashArray: [4, 4]),
+        ),
+        borderData: FlBorderData(show: false),
+        barGroups: List.generate(7, (i) {
+          final isToday = dates[i] == todayStr;
+          return BarChartGroupData(
+            x: i,
+            barRods: [
+              BarChartRodData(
+                toY: values[i],
+                color: isToday ? AppTheme.primaryGreen : AppTheme.primaryDarkGreen,
+                width: 16,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+              ),
+            ],
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildRecentSales(SalesProvider sales, String symbol, SettingsProvider settings) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Recent Transactions',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+        const SizedBox(height: 12),
+        if (sales.allSales.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+                color: AppTheme.bgDarkCard,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTheme.borderDark)),
+            child: const Center(
+              child: Text('No sales records yet.',
+                  style: TextStyle(color: AppTheme.textDarkSecondary)),
+            ),
+          )
+        else
+          Container(
+            decoration: BoxDecoration(
+                color: AppTheme.bgDarkCard,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppTheme.borderDark)),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: sales.allSales.take(6).length,
+              separatorBuilder: (_, __) => const Divider(height: 1, color: AppTheme.borderDark),
+              itemBuilder: (context, index) {
+                final s = sales.allSales[index];
+                return ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryGreen.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.receipt_rounded,
+                        color: AppTheme.primaryGreen, size: 20),
+                  ),
+                  title: Text(s.invoiceNumber,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.white, fontSize: 13)),
+                  subtitle: Text(
+                    '${Formatters.formatDateTimeFromIso(s.createdAt)} • ${s.paymentMethod.toUpperCase()}',
+                    style: const TextStyle(fontSize: 11, color: AppTheme.textDarkSecondary),
+                  ),
+                  trailing: Text(
+                    Formatters.formatCurrency(s.total, symbol: symbol),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: AppTheme.primaryMint, fontSize: 14),
+                  ),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTopProducts(ReportsProvider reports, String symbol) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Top Sellers',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+              color: AppTheme.bgDarkCard,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.borderDark)),
+          child: reports.topProducts.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(
+                    child: Text('No sales data yet.',
+                        style: TextStyle(color: AppTheme.textDarkSecondary)),
+                  ),
+                )
+              : ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: reports.topProducts.take(5).length,
+                  separatorBuilder: (_, __) =>
+                      const Divider(height: 1, color: AppTheme.borderDark),
+                  itemBuilder: (context, index) {
+                    final p = reports.topProducts[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        radius: 14,
+                        backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.2),
+                        child: Text(
+                          '${index + 1}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: index < 3
+                                ? AppTheme.primaryGreen
+                                : AppTheme.textDarkSecondary,
+                          ),
+                        ),
+                      ),
+                      title: Text(p.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white, fontSize: 13)),
+                      subtitle: Text('${p.totalQty} units sold',
+                          style: const TextStyle(
+                              fontSize: 11, color: AppTheme.textDarkSecondary)),
+                      trailing: Text(
+                        Formatters.formatCurrency(p.totalRevenue, symbol: symbol),
+                        style: const TextStyle(
+                            color: AppTheme.primaryMint,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
@@ -338,32 +509,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textDarkSecondary),
-              ),
+              Text(title,
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textDarkSecondary)),
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha:0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 20),
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10)),
+                child: Icon(icon, color: color, size: 18),
               ),
             ],
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                value,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white),
-              ),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
               const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: const TextStyle(fontSize: 11, color: AppTheme.textDarkMuted),
-              ),
+              Text(subtitle,
+                  style: const TextStyle(fontSize: 11, color: AppTheme.textDarkMuted)),
             ],
           ),
         ],
@@ -371,17 +539,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  BarChartGroupData _buildBarGroup(int x, double y) {
-    return BarChartGroupData(
-      x: x,
-      barRods: [
-        BarChartRodData(
-          toY: y,
-          color: x == 6 ? AppTheme.primaryGreen : AppTheme.primaryDarkGreen,
-          width: 16,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-        ),
-      ],
-    );
+  String _greeting() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Morning';
+    if (h < 17) return 'Afternoon';
+    return 'Evening';
+  }
+
+  String _formattedNow() {
+    final now = DateTime.now();
+    return '${now.day}/${now.month}/${now.year}';
   }
 }

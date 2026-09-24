@@ -54,7 +54,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedType,
+                  initialValue: selectedType,
                   dropdownColor: AppTheme.bgDarkCard,
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(labelText: 'Expense Category'),
@@ -88,7 +88,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     note: noteCtrl.text.trim(),
                   );
 
-                  if (mounted) Navigator.of(ctx).pop();
+                  if (!mounted) return;
+                  if (ctx.mounted) Navigator.of(ctx).pop();
                 },
                 child: const Text('Save Expense'),
               ),
