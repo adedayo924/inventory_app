@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print, avoid_single_cascade_in_expression_statements, unnecessary_string_interpolations, prefer_const_declarations
 import 'dart:io';
 import 'package:image/image.dart' as img;
 
