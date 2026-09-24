@@ -8,7 +8,7 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
 
-  static const int _dbVersion = 1;
+  static const int _dbVersion = 2;
   static const String dbName = 'jeilo_jims.db';
 
   DatabaseHelper._init();
@@ -27,6 +27,7 @@ class DatabaseHelper {
           options: OpenDatabaseOptions(
             version: _dbVersion,
             onCreate: _createDB,
+            onUpgrade: _upgradeDB,
           ),
         );
       } catch (e) {
@@ -36,6 +37,7 @@ class DatabaseHelper {
           options: OpenDatabaseOptions(
             version: _dbVersion,
             onCreate: _createDB,
+            onUpgrade: _upgradeDB,
           ),
         );
       }
@@ -47,8 +49,15 @@ class DatabaseHelper {
       options: OpenDatabaseOptions(
         version: _dbVersion,
         onCreate: _createDB,
+        onUpgrade: _upgradeDB,
       ),
     );
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE sales ADD COLUMN discount REAL NOT NULL DEFAULT 0');
+    }
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -210,6 +219,7 @@ class DatabaseHelper {
         invoice_number TEXT NOT NULL UNIQUE,
         subtotal REAL NOT NULL DEFAULT 0,
         tax_amount REAL NOT NULL DEFAULT 0,
+        discount REAL NOT NULL DEFAULT 0,
         total REAL NOT NULL DEFAULT 0,
         paid REAL NOT NULL DEFAULT 0,
         change REAL NOT NULL DEFAULT 0,

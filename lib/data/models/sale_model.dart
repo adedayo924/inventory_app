@@ -55,6 +55,7 @@ class SaleModel {
   final String invoiceNumber;
   final double subtotal;
   final double taxAmount;
+  final double discount;
   final double total;
   final double paid;
   final double change;
@@ -76,6 +77,7 @@ class SaleModel {
     required this.invoiceNumber,
     required this.subtotal,
     required this.taxAmount,
+    this.discount = 0.0,
     required this.total,
     required this.paid,
     required this.change,
@@ -99,6 +101,7 @@ class SaleModel {
       invoiceNumber: map['invoice_number'] as String? ?? '',
       subtotal: (map['subtotal'] as num?)?.toDouble() ?? 0.0,
       taxAmount: (map['tax_amount'] as num?)?.toDouble() ?? 0.0,
+      discount: (map['discount'] as num?)?.toDouble() ?? 0.0,
       total: (map['total'] as num?)?.toDouble() ?? 0.0,
       paid: (map['paid'] as num?)?.toDouble() ?? 0.0,
       change: (map['change'] as num?)?.toDouble() ?? 0.0,
@@ -123,6 +126,7 @@ class SaleModel {
       'invoice_number': invoiceNumber,
       'subtotal': subtotal,
       'tax_amount': taxAmount,
+      'discount': discount,
       'total': total,
       'paid': paid,
       'change': change,
